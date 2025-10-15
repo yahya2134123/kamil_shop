@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سوق مصنف - بيع وشراء</title>
+<style>
+  :root{--bg:#f5f7fb;--card:#fff;--muted:#6b7280;--accent:#2563eb;--radius:12px;font-family:Arial, sans-serif;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:#0f1724;}
+  header{background:var(--accent);color:white;padding:16px;text-align:center;}
+  .wrap{max-width:1100px;margin:20px auto;padding:0 16px;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px;}
+  .card{background:var(--card);border-radius:var(--radius);padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06);display:flex;flex-direction:column;}
+  .card img{width:100%;border-radius:var(--radius);aspect-ratio:4/3;object-fit:cover;}
+  .title{font-weight:700;margin:6px 0;}
+  .price{color:var(--accent);font-weight:700;}
+  .desc{font-size:14px;color:#334155;margin:6px 0;}
+  .cat{font-size:13px;color:var(--muted);}
+  .btn{padding:8px 12px;border:none;border-radius:8px;background:var(--accent);color:white;cursor:pointer;font-weight:600;}
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;padding:20px;z-index:100;}
+  .modal{background:white;padding:16px;border-radius:var(--radius);max-width:500px;width:100%;}
+  .input, select, textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef8;margin-top:6px;}
+  .img-preview{width:100%;height:150px;object-fit:cover;border-radius:8px;margin-top:6px;background:#f3f6fb;}
+  @media(max-width:940px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:640px){.grid{grid-template-columns:1fr;}}
+
+  /* زر إضافة منتوج ثابت على الجانب */
+  #openAdd {
+    position: fixed;
+    right: 20px;
+    top: 100px;
+    padding: 12px 18px;
+    border: 2px solid red;
+    background: white;
+    color: black;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 1000;
+  }
+  #openAdd:hover {
+    background: red;
+    color: white;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>سوق مصنف - بيع وشراء</h1>
+</header>
+<button class="btn" id="openAdd">+ أضف منتوج</button>
+<main class="wrap" id="categories">
+  <!-- التصنيفات ستضاف هنا تلقائياً -->
+</main>
+
+<!-- Modal إضافة منتوج -->
+<div class="modal-backdrop" id="backdropAdd">
+  <div class="modal">
+    <h3>أضف منتوج</h3>
+    <form id="addForm">
+      <label>اسم المنتج</label>
+      <input name="title" class="input" required />
+      <label>السعر</label>
+      <input name="price" class="input" required />
+      <label>الوصف</label>
+      <textarea name="desc" class="input"></textarea>
+      <label>التصنيف</label>
+      <select name="category" class="input">
+        <option value="كتب">كتب</option>
+        <option value="أدوات">أدوات</option>
+        <option value="ألبسة">ألبسة</option>
+        <option value="أخرى">أخرى</option>
+      </select>
+      <label>صورة المنتج</label>
+      <input type="file" id="imageInput" accept="image/*" class="input" required />
+      <img id="imgPreview" class="img-preview" alt="معاينة الصورة" />
+      <label>اسم البائع</label>
+      <input name="owner" class="input" required />
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button type="submit" class="btn">نشر</button>
+        <button type="button" id="closeAdd" class="btn" style="background:#6b7280;">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let items = JSON.parse(localStorage.getItem('items')||'[]');
+const categories = ['كتب','أدوات','ألبسة','أخرى'];
+const main = document.getElementById('categories');
+const imageInput = document.getElementById('imageInput');
+const imgPreview = document.getElementById('imgPreview');
+
+function saveItems(){ localStorage.setItem('items',JSON.stringify(items)); }
+
+function render(){
+  main.innerHTML='';
+  categories.forEach(cat=>{
+    const catItems = items.filter(i=>i.category===cat && i.owner);
+    if(catItems.length===0) return;
+    const section = document.createElement('section');
+    const h = document.createElement('h2'); h.textContent=cat; section.appendChild(h);
+    const grid = document.createElement('div'); grid.className='grid';
+    catItems.forEach(item=>{
+      const card = document.createElement('div'); card.className='card';
+      card.innerHTML=`
+        <img src="${item.image}" alt="${item.title}" />
+        <div class="title">${item.title}</div>
+        <div class="price">${item.price} د.م</div>
+        <div class="desc">${item.desc||''}</div>
+        <div class="cat">البائع: ${item.owner}</div>
+        <div class="btn" onclick="contact('${item.id}')">تواصل / اشري</div>
+      `;
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+    main.appendChild(section);
+  });
+}
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+
+imageInput.addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=> imgPreview.src = reader.result;
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('openAdd').addEventListener('click',()=>{ document.getElementById('backdropAdd').style.display='flex'; });
+document.getElementById('closeAdd').addEventListener('click',()=>{ document.getElementById('backdropAdd').style.display='none'; imgPreview.src=''; });
+
+document.getElementById('addForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  if(!imgPreview.src) return alert('المرجو إضافة صورة.');
+  const fd = new FormData(e.target);
+  const newItem = { id:uid(), title:fd.get('title'), price:fd.get('price'), desc:fd.get('desc'), category:fd.get('category'), image:imgPreview.src, owner:fd.get('owner') };
+  items.unshift(newItem);
+  saveItems();
+  render();
+  e.target.reset();
+  imgPreview.src='';
+  document.getElementById('backdropAdd').style.display='none';
+});
+
+function contact(id){
+  const item = items.find(i=>i.id===id);
+  const msg = prompt(`تواصل مع البائع\nمنتوج: ${item.title}\nالسعر: ${item.price} د.م\nاكتب رسالتك:`);
+  if(msg) alert('رسالتك تمّ حفظها محلياً');
+}
+
+render();
+</script>
+</body>
+</html>
