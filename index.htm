@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scole Marketplace</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 0 10px;
+    background: #f0f4f8;
+    color: #333;
+}
+h1,h2,h3 { color:#222; text-align:center; }
+
+/* Add button + */
+.add-btn {
+    position: fixed;
+    top:20px; right:20px;
+    width:50px; height:50px;
+    background: linear-gradient(135deg,#ff416c,#ff4b2b);
+    color:#fff; font-size:28px;
+    border:none; border-radius:50%;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 12px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+}
+.add-btn:hover { transform: scale(1.1); }
+
+/* Admins box top-left floating */
+.admins-box {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(255,255,255,0); /* transparent */
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #222; /* text visible */
+    z-index: 1000;
+}
+.admins-box h4 {
+    margin:0 0 4px 0;
+    font-size:14px;
+}
+.admins-box ul {
+    list-style:none;
+    margin:0;
+    padding:0;
+}
+.admins-box li {
+    margin:2px 0;
+    font-weight:bold;
+}
+
+/* Card */
+.card {
+    border-radius: 12px; padding:12px; margin:12px 0;
+    background:#fff; box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover { transform: translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,0.12); }
+
+/* Grid layout */
+.grid {
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:16px;
+    margin-top:20px;
+}
+@media(max-width:800px){ .grid{ grid-template-columns:repeat(2,1fr); } }
+@media(max-width:500px){ .grid{ grid-template-columns:1fr; } }
+
+/* Product thumbnail */
+.thumb {
+    width:100%; aspect-ratio:1/1; overflow:hidden; border-radius:8px; margin-bottom:8px;
+}
+.thumb img { width:100%; height:100%; object-fit:cover; display:block; transition: transform 0.2s; }
+.thumb img:hover { transform: scale(1.05); }
+
+/* Buttons */
+.btn { padding:8px 12px; border:none; border-radius:8px; cursor:pointer; font-size:14px; margin:4px 2px; transition: background 0.2s, transform 0.2s; }
+.btn-contact { background:#007bff; color:#fff; }
+.btn-contact:hover { background:#0056b3; transform:translateY(-2px); }
+.btn-delete { background:#dc3545; color:#fff; }
+.btn-delete:hover { background:#a71d2a; transform:translateY(-2px); }
+
+/* Upload form */
+img.preview { max-width:200px; margin-top:8px; display:block; border-radius:8px; border:1px solid #ccc; }
+form input, form textarea { width:100%; padding:6px 8px; margin-top:4px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+form textarea{ resize: vertical; }
+#uploadCard{ display:none; }
+
+</style>
+</head>
+<body>
+
+<div class="admins-box">
+    <h4>Admins</h4>
+    <ul>
+        <li>Yahya</li>
+        <li>Adam</li>
+        <li>Aniss</li>
+    </ul>
+</div>
+
+<button class="add-btn" id="toggleUpload">+</button>
+<h1>Scole Marketplace</h1>
+
+<section class="card" id="uploadCard">
+<h2>Add Product</h2>
+<form id="uploadForm">
+<div><label>Title<br><input name="title" required></label></div>
+<div><label>Price<br><input name="price" type="number" step="0.01" required></label></div>
+<div><label>Description<br><textarea name="desc"></textarea></label></div>
+<div><label>Contact (email/phone/Instagram/Facebook)<br><input name="contact"></label></div>
+<div><label>Photo<br><input id="imgInput" type="file" accept="image/*" required></label>
+<img id="imgPreview" class="preview" style="display:none"></div>
+<button type="submit">Add</button>
+</form>
+</section>
+
+<section class="card">
+<h2>Products</h2>
+<div id="products" class="grid"></div>
+</section>
+
+<script>
+const toggle = document.getElementById('toggleUpload');
+const uploadCard = document.getElementById('uploadCard');
+const form = document.getElementById('uploadForm');
+const imgInput = document.getElementById('imgInput');
+const imgPreview = document.getElementById('imgPreview');
+const productsDiv = document.getElementById('products');
+
+let products = [];
+
+toggle.addEventListener('click', ()=>{ uploadCard.style.display = uploadCard.style.display==='block'?'none':'block'; });
+
+imgInput.addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(!f){ imgPreview.style.display='none'; return; }
+    imgPreview.src = URL.createObjectURL(f);
+    imgPreview.style.display='block';
+});
+
+form.addEventListener('submit', e=>{
+    e.preventDefault();
+    const data = new FormData(form);
+    const reader = new FileReader();
+    reader.onload = function(){
+        const imgData = reader.result;
+        const item = {
+            id: Date.now().toString(36),
+            title: data.get('title'),
+            price: data.get('price'),
+            description: data.get('desc'),
+            contact: data.get('contact'),
+            imageUrl: imgData
+        };
+        products.unshift(item);
+        renderProducts();
+        form.reset();
+        imgPreview.style.display='none';
+        uploadCard.style.display='none';
+    };
+    reader.readAsDataURL(imgInput.files[0]);
+});
+
+function renderProducts(){
+    productsDiv.innerHTML = '';
+    products.forEach(p=>{
+        const el = document.createElement('div');
+        el.className='product card';
+        el.innerHTML = `
+            <div class="thumb"><img src="${p.imageUrl}" alt="${p.title}"></div>
+            <h3>${p.title}</h3>
+            <p>${p.description||''}</p>
+            <p><strong>${p.price} MAD</strong></p>
+            <div>
+                <button class="btn btn-contact" onclick="alert('Contact: ${p.contact}')">Contact</button>
+                <button class="btn btn-delete" onclick="deleteProduct('${p.id}')">Delete</button>
+            </div>
+        `;
+        productsDiv.appendChild(el);
+    });
+}
+
+function deleteProduct(id){
+    products = products.filter(p=>p.id!==id);
+    renderProducts();
+}
+</script>
+
+</body>
+</html>
